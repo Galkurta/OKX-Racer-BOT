@@ -8,7 +8,14 @@
 
 ## Installation
 
-``bash
+``git clone https://github.com/Galkurta/OKX-Racer-BOT.git
+``
+
+``
+cd OKX-Racer-BOT
+``
+
+``
 npm install
 ``
 
