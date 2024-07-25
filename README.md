@@ -2,7 +2,9 @@
 
 - Auto daily check in
 - Auto bet
-- Integrate with telegram bot
+- Auto reload fuel tank
+- Auto upgrade fuel tank
+- Auto upgrade turbo charge
 - Support multi account
 - Register OKX Racer [here](https://t.me/OKX_official_bot/OKX_Racer?startapp=linkCode_88910038)
 
@@ -21,16 +23,10 @@ npm install
 
 ## Usage
 
-### Edit data.txt 
+### Edit data.txt (if you can't open okx racer bot on telegram web/desktop use urban vpn and choose usa server)
 
 ``
 nano data.txt
-``
-
-### Input bot token & chat id 
-
-``
-nano main.js
 ``
 
 ### Create screen

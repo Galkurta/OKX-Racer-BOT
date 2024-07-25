@@ -3,13 +3,6 @@ const path = require('path');
 const axios = require('axios');
 const colors = require('colors');
 const readline = require('readline');
-const TelegramBot = require('node-telegram-bot-api');
-
-// Replace with your actual bot token and chat ID
-const TELEGRAM_BOT_TOKEN = 'YOUR_TELEGRAM_BOT_TOKEN';
-const TELEGRAM_CHAT_ID = 'YOUR_TELEGRAM_CHAT_ID';
-
-const bot = new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: false });
 
 class OKX {
     headers() {
@@ -20,8 +13,8 @@ class OKX {
             "App-Type": "web",
             "Content-Type": "application/json",
             "Origin": "https://www.okx.com",
-            "Referer": "https://t.me/OKX_official_bot/OKX_Racer?startapp=linkCode_88910038",
-            "Sec-Ch-Ua": '"Not/A)Brand";v="8", "Chromium";v="126", "Microsoft Edge";v="126", "Microsoft Edge WebView2";v="126"',
+            "Referer": "https://www.okx.com/mini-app/racer?tgWebAppStartParam=linkCode_85298986",
+            "Sec-Ch-Ua": '"Not/A)Brand";v="8", "Chromium";v="126", "Microsoft Edge";v="126"',
             "Sec-Ch-Ua-Mobile": "?0",
             "Sec-Ch-Ua-Platform": '"Windows"',
             "Sec-Fetch-Dest": "empty",
@@ -35,9 +28,9 @@ class OKX {
         };
     }
 
-    async postToOKXAPI(extUserId, extUserName) {
+    async postToOKXAPI(extUserId, extUserName, queryId) {
         const url = `https://www.okx.com/priapi/v1/affiliate/game/racer/info?t=${Date.now()}`;
-        const headers = this.headers();
+        const headers = { ...this.headers(), 'X-Telegram-Init-Data': queryId };
         const payload = {
             "extUserId": extUserId,
             "extUserName": extUserName,
@@ -48,9 +41,9 @@ class OKX {
         return axios.post(url, payload, { headers });
     }
 
-    async assessPrediction(extUserId, predict) {
+    async assessPrediction(extUserId, predict, queryId) {
         const url = `https://www.okx.com/priapi/v1/affiliate/game/racer/assess?t=${Date.now()}`;
-        const headers = this.headers();
+        const headers = { ...this.headers(), 'X-Telegram-Init-Data': queryId };
         const payload = {
             "extUserId": extUserId,
             "predict": predict,
@@ -60,29 +53,29 @@ class OKX {
         return axios.post(url, payload, { headers });
     }
 
-    async checkDailyRewards(extUserId) {
-        const url = `https://www.okx.com/priapi/v1/affiliate/game/racer/tasks?extUserId=${extUserId}&t=${Date.now()}`;
-        const headers = this.headers();
+    async checkDailyRewards(extUserId, queryId) {
+        const url = `https://www.okx.com/priapi/v1/affiliate/game/racer/tasks?t=${Date.now()}`;
+        const headers = { ...this.headers(), 'X-Telegram-Init-Data': queryId };
         try {
             const response = await axios.get(url, { headers });
             const tasks = response.data.data;
             const dailyCheckInTask = tasks.find(task => task.id === 4);
             if (dailyCheckInTask) {
                 if (dailyCheckInTask.state === 0) {
-                    console.log('Start check-in ...'.yellow);
-                    await this.performCheckIn(extUserId, dailyCheckInTask.id);
+                    this.log('Start checkin ... ');
+                    await this.performCheckIn(extUserId, dailyCheckInTask.id, queryId);
                 } else {
-                    console.log('Today you have already checked in!'.green);
+                    this.log('Today you have attended!');
                 }
             }
         } catch (error) {
-            this.log(`Daily reward check error: ${error.message}`.red);
+            this.log(`Daily reward check error: ${error.message}`);
         }
     }
 
-    async performCheckIn(extUserId, taskId) {
+    async performCheckIn(extUserId, taskId, queryId) {
         const url = `https://www.okx.com/priapi/v1/affiliate/game/racer/task?t=${Date.now()}`;
-        const headers = this.headers();
+        const headers = { ...this.headers(), 'X-Telegram-Init-Data': queryId };
         const payload = {
             "extUserId": extUserId,
             "id": taskId
@@ -90,18 +83,14 @@ class OKX {
 
         try {
             await axios.post(url, payload, { headers });
-            this.log('Daily attendance successful!'.green);
+            this.log('Daily attendance successfully!');
         } catch (error) {
-            this.log(`Error: ${error.message}`.red);
+            this.log(`Error: ${error.message}`);
         }
     }
 
     log(msg) {
         console.log(`[*] ${msg}`);
-    }
-
-    logWithoutPrefix(msg) {
-        console.log(`${msg}`);
     }
 
     async sleep(ms) {
@@ -120,18 +109,95 @@ class OKX {
     async Countdown(seconds) {
         for (let i = seconds; i >= 0; i--) {
             readline.cursorTo(process.stdout, 0);
-            process.stdout.write(`[*] Wait ${i} seconds to continue ...`);
+            process.stdout.write(`[*] Wait ${i} Seconds to continue ...`);
             await new Promise(resolve => setTimeout(resolve, 1000));
         }
         console.log('');
     }
 
-    async sendToTelegram(message) {
+    extractUserData(queryId) {
+        const urlParams = new URLSearchParams(queryId);
+        const user = JSON.parse(decodeURIComponent(urlParams.get('user')));
+        return {
+            extUserId: user.id,
+            extUserName: user.username
+        };
+    }
+
+    async getBoosts(queryId) {
+        const url = `https://www.okx.com/priapi/v1/affiliate/game/racer/boosts?t=${Date.now()}`;
+        const headers = { ...this.headers(), 'X-Telegram-Init-Data': queryId };
         try {
-            await bot.sendMessage(TELEGRAM_CHAT_ID, message, { parse_mode: 'MarkdownV2' });
+            const response = await axios.get(url, { headers });
+            return response.data.data;
         } catch (error) {
-            this.log(`Telegram error: ${error.message}`.red);
+            console.log(`BOOSTS Information Error: ${error.message}`);
+            return [];
         }
+    }
+
+    async useBoost(queryId) {
+        const url = `https://www.okx.com/priapi/v1/affiliate/game/racer/boost?t=${Date.now()}`;
+        const headers = { ...this.headers(), 'X-Telegram-Init-Data': queryId };
+        const payload = { id: 1 };
+
+        try {
+            const response = await axios.post(url, payload, { headers });
+            if (response.data.code === 0) {
+                this.log('Reload Fuel Tank successfully!'.yellow);
+                await this.Countdown(5);
+            } else {
+                this.log(`Error Reload Fuel Tank: ${response.data.msg}`.red);
+            }
+        } catch (error) {
+            this.log(`Crazyi: ${error.message}`.red);
+        }
+    }
+
+    async upgradeFuelTank(queryId) {
+        const url = `https://www.okx.com/priapi/v1/affiliate/game/racer/boost?t=${Date.now()}`;
+        const headers = { ...this.headers(), 'X-Telegram-Init-Data': queryId };
+        const payload = { id: 2 };
+    
+        try {
+            const response = await axios.post(url, payload, { headers });
+            if (response.data.code === 0) {
+                this.log('Upgrade Fuel Tank thành công!'.yellow);
+            } else {
+                this.log(`Upgrade error Fuel Tank: ${response.data.msg}`.red);
+            }
+        } catch (error) {
+            this.log(`Crazyi: ${error.message}`.red);
+        }
+    }
+
+    async upgradeTurbo(queryId) {
+        const url = `https://www.okx.com/priapi/v1/affiliate/game/racer/boost?t=${Date.now()}`;
+        const headers = { ...this.headers(), 'X-Telegram-Init-Data': queryId };
+        const payload = { id: 3 };
+    
+        try {
+            const response = await axios.post(url, payload, { headers });
+            if (response.data.code === 0) {
+                this.log('Successful Turbo Charger upgrade!'.yellow);
+            } else {
+                this.log(`Turbo Charge upgrade errorr: ${response.data.msg}`.red);
+            }
+        } catch (error) {
+            this.log(`Error: ${error.message}`.red);
+        }
+    }
+
+    askQuestion(query) {
+        const rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout
+        });
+
+        return new Promise(resolve => rl.question(query, ans => {
+            rl.close();
+            resolve(ans);
+        }));
     }
 
     async main() {
@@ -140,49 +206,80 @@ class OKX {
             .replace(/\r/g, '')
             .split('\n')
             .filter(Boolean);
+    
+        const nangcapfueltank = await this.askQuestion('Do you want to upgrade Fuel Tank? (y/n): ');
+        const hoinangcap = nangcapfueltank.toLowerCase() === 'y';
+        const nangcapturbo = await this.askQuestion('Do you want to upgrade Turbo Charger? (y/n): ');
+        const hoiturbo = nangcapturbo.toLowerCase() === 'y';
 
         while (true) {
             for (let i = 0; i < userData.length; i++) {
-                const [extUserId, extUserName] = userData[i].split('|');
+                const queryId = userData[i];
+                const { extUserId, extUserName } = this.extractUserData(queryId);
                 try {
-                    console.log(`========== Account ${i + 1} | ${extUserName} ==========`.blue);
-                    await this.checkDailyRewards(extUserId);
+                    await this.checkDailyRewards(extUserId, queryId);
+
+                    let boosts = await this.getBoosts(queryId);
+                    boosts.forEach(boost => {
+                        this.log(`${boost.context.name.green}: ${boost.curStage}/${boost.totalStage}`);
+                    });
+                    let reloadFuelTank = boosts.find(boost => boost.id === 1);
+                    let fuelTank = boosts.find(boost => boost.id === 2);
+                    let turbo = boosts.find(boost => boost.id === 3);
+                    if (fuelTank && hoinangcap) {
+                        const balanceResponse = await this.postToOKXAPI(extUserId, extUserName, queryId);
+                        const balancePoints = balanceResponse.data.data.balancePoints;
+                        if (fuelTank.curStage < fuelTank.totalStage && balancePoints > fuelTank.pointCost) {
+                            await this.upgradeFuelTank(queryId);
+                            
+                            boosts = await this.getBoosts(queryId);
+                            const updatedFuelTank = boosts.find(boost => boost.id === 2);
+                            const updatebalanceResponse = await this.postToOKXAPI(extUserId, extUserName, queryId);
+                            const updatedBalancePoints = updatebalanceResponse.data.data.balancePoints;
+                            if (updatedFuelTank.curStage >= fuelTank.totalStage || updatedBalancePoints < fuelTank.pointCost) {
+                                this.log('Not eligible to upgrade Fuel Tank!'.red);
+                                continue;
+                            }
+                        } else {
+                            this.log('Not eligible to upgrade Fuel Tank!'.red);
+                        }
+                    }
+                    if (turbo && hoiturbo) {
+                        const balanceResponse = await this.postToOKXAPI(extUserId, extUserName, queryId);
+                        const balancePoints = balanceResponse.data.data.balancePoints;
+                        if (turbo.curStage < turbo.totalStage && balancePoints > turbo.pointCost) {
+                            await this.upgradeTurbo(queryId);
+                            
+                            boosts = await this.getBoosts(queryId);
+                            const updatedTurbo = boosts.find(boost => boost.id === 3);
+                            const updatebalanceResponse = await this.postToOKXAPI(extUserId, extUserName, queryId);
+                            const updatedBalancePoints = updatebalanceResponse.data.data.balancePoints;
+                            if (updatedTurbo.curStage >= turbo.totalStage || updatedBalancePoints < turbo.pointCost) {
+                                this.log('Upgrading Turbo Charger failed!'.red);
+                                continue;
+                            }
+                        } else {
+                            this.log('Not eligible to upgrade Turbo Charger!'.red);
+                        }
+                    }
                     for (let j = 0; j < 50; j++) {
-                        const response = await this.postToOKXAPI(extUserId, extUserName);
+                        const response = await this.postToOKXAPI(extUserId, extUserName, queryId);
                         const balancePoints = response.data.data.balancePoints;
-
+                        this.log(`${'balancePoints:'.green} ${balancePoints}`);
+    
                         const predict = 1;
-                        const assessResponse = await this.assessPrediction(extUserId, predict);
+                        const assessResponse = await this.assessPrediction(extUserId, predict, queryId);
                         const assessData = assessResponse.data.data;
-                        const result = assessData.won ? 'Win' : 'Lose';
+                        const result = assessData.won ? 'Win'.green : 'Lose'.red;
                         const calculatedValue = assessData.basePoint * assessData.multiplier;
-
-                        const output = `
-${'='.repeat(50).blue}
-Balance Points: ${balancePoints.toString().green}
-Result: ${result.bold}
-Multiplier: ${assessData.multiplier.toString().yellow}
-Receive: ${calculatedValue.toString().magenta}
-Balance: ${assessData.balancePoints.toString().cyan}
-Old price: ${assessData.prevPrice.toString().grey}
-Current price: ${assessData.currentPrice.toString().grey}
-${'='.repeat(50).blue}
-                        `.trim();
-                        this.logWithoutPrefix(output);
-
-                        const telegramMessage = `
-*Account:* \`${extUserName}\`
-*Balance Points:* \`${balancePoints}\`
-*Result:* \`${result}\`
-*Multiplier:* \`${assessData.multiplier}\`
-*Receive:* \`${calculatedValue}\`
-*Balance:* \`${assessData.balancePoints}\`
-*Old Price:* \`${assessData.prevPrice}\`
-*Current Price:* \`${assessData.currentPrice}\`
-                        `.trim();
-                        await this.sendToTelegram(telegramMessage);
-
-                        if (assessData.numChance > 1) {
+                        this.log(`Result: ${result} x ${assessData.multiplier}! Balance: ${assessData.balancePoints}, Receive: ${calculatedValue}, Old price: ${assessData.prevPrice}, Current price: ${assessData.currentPrice}`.magenta);
+    
+                        if (assessData.numChance <= 0 && reloadFuelTank && reloadFuelTank.curStage < reloadFuelTank.totalStage) {
+                            await this.useBoost(queryId);
+    
+                            boosts = await this.getBoosts(queryId);
+                            reloadFuelTank = boosts.find(boost => boost.id === 1);
+                        } else if (assessData.numChance > 0) {
                             await this.Countdown(5);
                             continue;
                         } else if (assessData.secondToRefresh > 0) {
@@ -197,7 +294,7 @@ ${'='.repeat(50).blue}
             }
             await this.waitWithCountdown(60);
         }
-    }
+    }    
 }
 
 if (require.main === module) {

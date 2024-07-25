@@ -1,1 +1,2 @@
-user_id|username
+query_id=
+query_id=
