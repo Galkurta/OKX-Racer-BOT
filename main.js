@@ -162,7 +162,7 @@ class OKX {
         try {
             const response = await axios.post(url, payload, { headers });
             if (response.data.code === 0) {
-                this.log('Upgrade Fuel Tank thành công!'.yellow);
+                this.log('Upgrade Fuel Tank success!'.yellow);
             } else {
                 this.log(`Upgrade error Fuel Tank: ${response.data.msg}`.red);
             }
