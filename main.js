@@ -13,7 +13,7 @@ class OKX {
             "App-Type": "web",
             "Content-Type": "application/json",
             "Origin": "https://www.okx.com",
-            "Referer": "https://www.okx.com/mini-app/racer?tgWebAppStartParam=linkCode_85298986",
+            "Referer": "https://www.okx.com/mini-app/racer?tgWebAppStartParam=linkCode_88910038",
             "Sec-Ch-Ua": '"Not/A)Brand";v="8", "Chromium";v="126", "Microsoft Edge";v="126"',
             "Sec-Ch-Ua-Mobile": "?0",
             "Sec-Ch-Ua-Platform": '"Windows"',
@@ -62,7 +62,7 @@ class OKX {
             const dailyCheckInTask = tasks.find(task => task.id === 4);
             if (dailyCheckInTask) {
                 if (dailyCheckInTask.state === 0) {
-                    this.log('Start checkin ... ');
+                    this.log('Start checkin ...');
                     await this.performCheckIn(extUserId, dailyCheckInTask.id, queryId);
                 } else {
                     this.log('Today you have attended!');
@@ -144,13 +144,13 @@ class OKX {
         try {
             const response = await axios.post(url, payload, { headers });
             if (response.data.code === 0) {
-                this.log('Reload Fuel Tank successfully!'.yellow);
+                this.log('Reload Fuel Tank thành công!'.yellow);
                 await this.Countdown(5);
             } else {
-                this.log(`Error Reload Fuel Tank: ${response.data.msg}`.red);
+                this.log(`l?iReloadFuelTank: ${response.data.msg}`.red);
             }
         } catch (error) {
-            this.log(`Crazyi: ${error.message}`.red);
+            this.log(`Error: ${error.message}`.red);
         }
     }
 
@@ -162,12 +162,12 @@ class OKX {
         try {
             const response = await axios.post(url, payload, { headers });
             if (response.data.code === 0) {
-                this.log('Upgrade Fuel Tank success!'.yellow);
+                this.log('Successful Fuel Tank upgrade!'.yellow);
             } else {
-                this.log(`Upgrade error Fuel Tank: ${response.data.msg}`.red);
+                this.log(`Fuel tank upgrade error: ${response.data.msg}`.red);
             }
         } catch (error) {
-            this.log(`Crazyi: ${error.message}`.red);
+            this.log(`Error: ${error.message}`.red);
         }
     }
 
@@ -181,13 +181,27 @@ class OKX {
             if (response.data.code === 0) {
                 this.log('Successful Turbo Charger upgrade!'.yellow);
             } else {
-                this.log(`Turbo Charge upgrade errorr: ${response.data.msg}`.red);
+                this.log(`Turbo Charger upgrade error: ${response.data.msg}`.red);
             }
         } catch (error) {
             this.log(`Error: ${error.message}`.red);
         }
     }
 
+    async getCurrentPrice() {
+        const url = 'https://www.okx.com/api/v5/market/ticker?instId=BTC-USDT';
+        try {
+            const response = await axios.get(url);
+            if (response.data.code === '0' && response.data.data && response.data.data.length > 0) {
+                return parseFloat(response.data.data[0].last);
+            } else {
+                throw new Error('Error when taking the current price');
+            }
+        } catch (error) {
+            throw new Error(`The current price error: ${error.message}`);
+        }
+    }
+    
     askQuestion(query) {
         const rl = readline.createInterface({
             input: process.stdin,
@@ -207,18 +221,19 @@ class OKX {
             .split('\n')
             .filter(Boolean);
     
-        const nangcapfueltank = await this.askQuestion('Do you want to upgrade Fuel Tank? (y/n): ');
+        const nangcapfueltank = await this.askQuestion('Do you want to upgrade Fuel Tank?(y/n): ');
         const hoinangcap = nangcapfueltank.toLowerCase() === 'y';
-        const nangcapturbo = await this.askQuestion('Do you want to upgrade Turbo Charger? (y/n): ');
+        const nangcapturbo = await this.askQuestion('Do you want to upgrade Turbo Charger?(y/n): ');
         const hoiturbo = nangcapturbo.toLowerCase() === 'y';
-
+    
         while (true) {
             for (let i = 0; i < userData.length; i++) {
                 const queryId = userData[i];
                 const { extUserId, extUserName } = this.extractUserData(queryId);
                 try {
+                    console.log(`========== Account ${i + 1} | ${extUserName} ==========`.blue);
                     await this.checkDailyRewards(extUserId, queryId);
-
+    
                     let boosts = await this.getBoosts(queryId);
                     boosts.forEach(boost => {
                         this.log(`${boost.context.name.green}: ${boost.curStage}/${boost.totalStage}`);
@@ -231,7 +246,7 @@ class OKX {
                         const balancePoints = balanceResponse.data.data.balancePoints;
                         if (fuelTank.curStage < fuelTank.totalStage && balancePoints > fuelTank.pointCost) {
                             await this.upgradeFuelTank(queryId);
-                            
+    
                             boosts = await this.getBoosts(queryId);
                             const updatedFuelTank = boosts.find(boost => boost.id === 2);
                             const updatebalanceResponse = await this.postToOKXAPI(extUserId, extUserName, queryId);
@@ -249,7 +264,7 @@ class OKX {
                         const balancePoints = balanceResponse.data.data.balancePoints;
                         if (turbo.curStage < turbo.totalStage && balancePoints > turbo.pointCost) {
                             await this.upgradeTurbo(queryId);
-                            
+    
                             boosts = await this.getBoosts(queryId);
                             const updatedTurbo = boosts.find(boost => boost.id === 3);
                             const updatebalanceResponse = await this.postToOKXAPI(extUserId, extUserName, queryId);
@@ -262,28 +277,38 @@ class OKX {
                             this.log('Not eligible to upgrade Turbo Charger!'.red);
                         }
                     }
-                    for (let j = 0; j < 50; j++) {
+                    
+                    while (true) {
+                        const price1 = await this.getCurrentPrice();
+                        await this.sleep(4000);
+                        const price2 = await this.getCurrentPrice();
+    
+                        let predict;
+                        let action;
+                        if (price1 > price2) {
+                            predict = 0; // Sell
+                            action = 'Sell';
+                        } else {
+                            predict = 1; // Buy
+                            action = 'First';
+                        }
                         const response = await this.postToOKXAPI(extUserId, extUserName, queryId);
                         const balancePoints = response.data.data.balancePoints;
-                        this.log(`${'balancePoints:'.green} ${balancePoints}`);
+                        this.log(`${'Balance Points:'.green} ${balancePoints}`);
     
-                        const predict = 1;
                         const assessResponse = await this.assessPrediction(extUserId, predict, queryId);
                         const assessData = assessResponse.data.data;
                         const result = assessData.won ? 'Win'.green : 'Lose'.red;
                         const calculatedValue = assessData.basePoint * assessData.multiplier;
-                        this.log(`Result: ${result} x ${assessData.multiplier}! Balance: ${assessData.balancePoints}, Receive: ${calculatedValue}, Old price: ${assessData.prevPrice}, Current price: ${assessData.currentPrice}`.magenta);
+                        this.log(`Forecast ${action} | Result: ${result} x ${assessData.multiplier}! Balance: ${assessData.balancePoints}, Receive: ${calculatedValue}, Old price: ${assessData.prevPrice}, Current price: ${assessData.currentPrice}`.magenta);
     
-                        if (assessData.numChance <= 0 && reloadFuelTank && reloadFuelTank.curStage < reloadFuelTank.totalStage) {
+                        if (assessData.numChance > 0) {
+                            await this.Countdown(1);
+                        } else if (assessData.numChance <= 0 && reloadFuelTank && reloadFuelTank.curStage < reloadFuelTank.totalStage) {
                             await this.useBoost(queryId);
     
                             boosts = await this.getBoosts(queryId);
                             reloadFuelTank = boosts.find(boost => boost.id === 1);
-                        } else if (assessData.numChance > 0) {
-                            await this.Countdown(5);
-                            continue;
-                        } else if (assessData.secondToRefresh > 0) {
-                            await this.Countdown(assessData.secondToRefresh + 5);
                         } else {
                             break;
                         }
@@ -292,9 +317,9 @@ class OKX {
                     this.log(`${'Error:'.red} ${error.message}`);
                 }
             }
-            await this.waitWithCountdown(60);
+            await this.waitWithCountdown(600);
         }
-    }    
+    } 
 }
 
 if (require.main === module) {
