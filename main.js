@@ -144,10 +144,10 @@ class OKX {
         try {
             const response = await axios.post(url, payload, { headers });
             if (response.data.code === 0) {
-                this.log('Reload Fuel Tank thành công!'.yellow);
+                this.log('Reload Fuel Tank Success!!'.yellow);
                 await this.Countdown(5);
             } else {
-                this.log(`l?iReloadFuelTank: ${response.data.msg}`.red);
+                this.log(`Reload Fuel Tank Failed: ${response.data.msg}`.red);
             }
         } catch (error) {
             this.log(`Error: ${error.message}`.red);
