@@ -24,8 +24,8 @@ npm install
 ## Usage
 
 ### Edit data.txt (if you can't open okx racer bot on telegram web/desktop use urban vpn and choose usa server)
-VPN: https://chromewebstore.google.com/detail/urban-vpn-proxy/eppiocemhmnlbhjplcgkofciiegomcon
-Bypass header: https://chromewebstore.google.com/detail/ignore-x-frame-headers/gleekbfjekiniecknbkamfmkohkpodhe
+- VPN: https://chromewebstore.google.com/detail/urban-vpn-proxy/eppiocemhmnlbhjplcgkofciiegomcon
+- Bypass header: https://chromewebstore.google.com/detail/ignore-x-frame-headers/gleekbfjekiniecknbkamfmkohkpodhe
 
 ``
 nano data.txt
