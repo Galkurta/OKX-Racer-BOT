@@ -8,6 +8,11 @@
 - Support multi account
 - Register OKX Racer [here](https://t.me/OKX_official_bot/OKX_Racer?startapp=linkCode_88910038)
 
+# Additional info: 
+- 401 : retrieve query_id
+- 429 : error from server
+- 403 : error from cloudflare
+
 ## Installation
 
 ``git clone https://github.com/Galkurta/OKX-Racer-BOT.git
